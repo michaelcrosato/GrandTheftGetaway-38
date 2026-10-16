@@ -8,6 +8,7 @@ import { BUILDINGS, PICKUPS, blocked } from './level';
 import { DISTRICTS, ROADS, SHORE_X, WORLD_LIMITS as W, TOUR_ROUTE, PIERS } from './districts';
 import { PROPS } from './props';
 import { ASSETS } from '../art/catalog';
+import { yieldToRunner } from '../qa/test-helpers';
 import type { ArtManifest } from '../../art/types';
 const manifest = JSON.parse(readFileSync(new URL('../../art/manifest.json', import.meta.url), 'utf8')) as ArtManifest;
 describe('Saltwater Bay expansion', () => {
@@ -34,7 +35,7 @@ describe('Saltwater Bay expansion', () => {
       ).toBe(true);
     expect(manifest.assets.filter((a) => a.category === 'Illustrated signs')).toHaveLength(8);
   });
-  it('ships finite, indexed, material-backed exports and previews for every model', () => {
+  it('ships finite, indexed, material-backed exports and previews for every model', async () => {
     expect(manifest.assets.length).toBe(101);
     expect(manifest.assets.filter((a) => a.obj)).toHaveLength(93);
     for (const a of manifest.assets) {
@@ -58,6 +59,7 @@ describe('Saltwater Bay expansion', () => {
         a.size?.every((n) => Number.isFinite(n) && n > 0),
         a.id,
       ).toBe(true);
+      await yieldToRunner();
     }
   });
   it('drives a continuous ordinary-input tour through all eight neighborhoods and ends cleanly', async () => {
@@ -66,6 +68,7 @@ describe('Saltwater Bay expansion', () => {
     for (let i = 0; i < 21000 && v.job.state === 'playing'; i++) {
       h.step(1, botIntents(v));
       v = viewOf(h);
+      if (i % 240 === 0) await yieldToRunner();
     }
     expect(v.job.state).toBe('won');
     expect(v.job.route).toBe(TOUR_ROUTE.length);
