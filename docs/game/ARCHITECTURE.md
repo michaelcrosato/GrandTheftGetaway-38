@@ -36,3 +36,11 @@ A new car uses the existing vehicle component and handling system with a model f
 `window.__engine` is the engine inspector (hash, capture, restore, state, intents and replay). `?qa=1` additionally exposes `window.__game` for snapshot reads, ordinary-intent stepping, bot stepping, high-level menu actions and renderer statistics. This test bridge does not expose arbitrary component mutation.
 
 The stock engine's `x shot` assumes its bundled scene renderer; this game owns its view. Use `npm run e2e` for the corresponding display proof and `node x sim labs/game/scenes/play.ts` for engine-level simulation proof. The original engine tools and documentation are retained.
+
+## Expanded city and art library (v1.1)
+
+The city is split into `world/districts.ts` (bounds, roads, districts, piers, tour and traffic circuits), `world/blocks.ts` (145 authored/generated parcels), `world/props.ts` (1,004 placements and solid footprints), and `world/collision.ts` (immutable spatial bins). The original mission content remains in `world/level.ts`.
+
+`art/catalog.ts` assembles 62 reusable scenery recipes, `art/architecture.ts` draws 14 styles, `art/vehicles.ts` supplies eight body styles, and `art/graphics/` holds eight original illustrated SVG campaigns. Procedural character outfits are shared by the city and nine exports. `qa/export-art.ts` generates the 101-entry portable library and its gallery manifest under `labs/art/`.
+
+Cruise mode is a declared setting and component flag; discovery is a replayable district bitmask. The bot follows the tour through normal steering and throttle intents. The page's QA-only `autoplay` switch changes input ownership and pause state without editing simulation components. City rendering uses the engine's shared instance-batch API with cell/distance culling, and exports preserve those instance transforms and colours.

@@ -36,6 +36,7 @@ try {
   assert.equal(await page.evaluate(() => window.__game.mode()), 'title');
   pass('Title and GPU renderer initialize');
   await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__game.mode() === 'options');
   pass('Keyboard focus skips unavailable Continue and opens Settings');

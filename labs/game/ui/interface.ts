@@ -1,9 +1,11 @@
 /** @file HUD and controller focus. Mission copy is shared with simulation content, with contextual input prompts. */
-import { MISSION_STAGES, LOCATIONS } from '../world/level';
+import { MISSION_STAGES, LOCATIONS, PICKUPS } from '../world/level';
 import { distance } from '../world/math';
 import type { GameView } from '../bot';
 import type { Save } from './storage';
 import { drawMap } from './minimap';
+import { DISTRICTS, districtAt } from '../world/districts';
+import { VEHICLE_NAMES } from '../art/vehicle-names';
 export const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 export function setText(id: string, text: string): void {
   const element = $(id);
@@ -112,18 +114,32 @@ export class Interface {
       j = v.job,
       stage = MISSION_STAGES[Math.min(j.stage, 5)],
       car = v.cars.find((c) => c.id === p.car);
+    const district = districtAt(p.x, p.z);
+    setText('district', p.y > 3 ? 'Club Mirage' : district.name);
+    setText('objective-index', j.cruise ? '∞' : String(j.stage + 1).padStart(2, '0'));
     setText(
-      'district',
-      p.y > 3 ? 'Club Mirage' : p.z < -85 ? 'Marina Quarter' : p.x < -30 ? 'Sunset District' : 'Ocean Drive',
+      'objective',
+      j.cruise && j.race < 0
+        ? 'Cruise Saltwater Bay'
+        : j.race >= 0
+          ? `Ocean Sprint · Gate ${j.race + 1}/6`
+          : stage.task,
     );
-    setText('objective-index', String(j.stage + 1).padStart(2, '0'));
-    setText('objective', j.race >= 0 ? `Ocean Sprint · Gate ${j.race + 1}/6` : stage.task);
     setText(
       'objective-chapter',
-      j.race >= 0 ? `${Math.ceil(90 - j.raceTick / 60)} SECONDS LEFT` : stage.title.toUpperCase(),
+      j.race >= 0
+        ? `${Math.ceil(90 - j.raceTick / 60)} SECONDS LEFT`
+        : j.cruise
+          ? district.subtitle.toUpperCase()
+          : stage.title.toUpperCase(),
     );
-    setText('objective-detail', stage.detail);
-    setText('distance', `${Math.round(distance(p, stage.target))} m`);
+    setText(
+      'objective-detail',
+      j.cruise
+        ? `${j.discovered.toString(2).split('1').length - 1} / ${DISTRICTS.length} neighborhoods · ${PICKUPS.length} lost mixtapes. Take your time.`
+        : stage.detail,
+    );
+    setText('distance', j.cruise ? '' : `${Math.round(distance(p, stage.target))} m`);
     setText('cash', `$ ${String(Math.round(p.cash)).padStart(6, '0')}`);
     setText('stars', '★'.repeat(j.heat) + '☆'.repeat(5 - j.heat));
     setText('health', `${Math.ceil(p.hp)}`);
@@ -134,16 +150,10 @@ export class Interface {
       'heat-label',
       j.heat ? (j.unseen ? `SEARCHING · ${Math.ceil((420 - j.unseen) / 60)}s` : 'POLICE IN PURSUIT') : '',
     );
-    setText('tapes', `${p.tapes} / 5`);
+    setText('tapes', `${p.tapes} / ${PICKUPS.length}`);
     setText(
       'equipment-label',
-      car
-        ? car.type === 'cobalt'
-          ? 'COBALT · SPORT CABRIOLET'
-          : 'BORROWED WHEELS'
-        : p.weapon
-          ? 'COMPACT SMG'
-          : 'SERVICE PISTOL',
+      car ? (VEHICLE_NAMES[car.model] ?? 'BORROWED WHEELS') : p.weapon ? 'COMPACT SMG' : 'SERVICE PISTOL',
     );
     $('equipment-value').innerHTML = car
       ? `${Math.round(Math.abs(car.speed) * 3.6)
@@ -164,7 +174,7 @@ export class Interface {
     );
     const use = gamepad ? '△' : 'E';
     let context = '';
-    if (j.stage === 0 && distance(p, LOCATIONS.phone) < 5) context = 'Answer the payphone';
+    if (!j.cruise && j.stage === 0 && distance(p, LOCATIONS.phone) < 5) context = 'Answer the payphone';
     else if (j.stage === 4 && distance(p, LOCATIONS.club) < 6 && !car) context = 'Take the service lift';
     else if (j.stage === 5 && distance(p, LOCATIONS.roof) < 5) context = 'Deliver the master tape';
     else if (distance(p, LOCATIONS.garage) < 7) context = 'Repair & restock · $100';
@@ -181,11 +191,14 @@ export class Interface {
           ? 'L MOVE     R1 SPRINT     ✕ JUMP     R2 FIRE     □ RELOAD     △ INTERACT'
           : 'WASD MOVE     SHIFT SPRINT     SPACE JUMP     F / CLICK FIRE     R RELOAD     E INTERACT',
     );
-    $('dialogue').hidden = j.ticks > 450 || (j.stage === 0 && j.ticks > 300);
+    $('dialogue').hidden = j.cruise || j.ticks > 450 || (j.stage === 0 && j.ticks > 300);
     setText('speaker', stage.radio);
     setText('dialogue-text', stage.line);
-    $('toast').hidden = j.messageTick <= 0;
-    setText('toast', j.message);
+    $('toast').hidden = j.messageTick <= 0 && j.state !== 'won';
+    setText(
+      'toast',
+      j.state === 'won' ? (j.cruise ? 'SALTWATER BAY · THE CITY IS YOURS' : 'DELIVERY COMPLETE · +$2,000') : j.message,
+    );
     $('damage-flash').style.opacity = p.invincible > 10 ? '.45' : '0';
     drawMap($<HTMLCanvasElement>('radar'), v);
   }

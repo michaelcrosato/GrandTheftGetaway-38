@@ -8,7 +8,8 @@ import { Interface, $, setText } from './ui/interface';
 import { readSave, writeSave } from './ui/storage';
 import { drawMap } from './ui/minimap';
 import { Soundtrack } from './audio/sound';
-import { MISSION_STAGES } from './world/level';
+import { MISSION_STAGES, PICKUPS } from './world/level';
+import { prepareArt } from './art/graphics';
 const save = readSave(),
   ui = new Interface(),
   controls = new Controls(),
@@ -42,7 +43,7 @@ function applySettings(): void {
   sound.configure(save.settings.volume, save.settings.music);
   writeSave(save);
 }
-async function start(checkpoint = 0, demo = false): Promise<void> {
+async function start(checkpoint = 0, demo = false, cruise = false): Promise<void> {
   if (initializing) return;
   initializing = true;
   const generation = ++runGeneration;
@@ -51,7 +52,7 @@ async function start(checkpoint = 0, demo = false): Promise<void> {
     engine = await createHeadless({
       scene: play,
       seed: seed++,
-      settings: { 'game.checkpoint': checkpoint, 'game.difficulty': save.settings.difficulty },
+      settings: { 'game.checkpoint': checkpoint, 'game.difficulty': save.settings.difficulty, 'game.cruise': cruise },
     });
     if (previousEngine) disposeHeadless(previousEngine);
     if (generation !== runGeneration) return;
@@ -60,7 +61,7 @@ async function start(checkpoint = 0, demo = false): Promise<void> {
     endingAt = 0;
     changeMode(demo ? 'demo' : 'playing');
     document.body.dataset.mobileMenu = 'false';
-    if (!demo) {
+    if (!demo && !cruise) {
       save.checkpoint = checkpoint;
       writeSave(save);
       void sound.unlock();
@@ -81,14 +82,19 @@ function paused(): void {
   }
   if (mode === 'playing') {
     changeMode('paused');
-    ui.panel('THE CITY CAN WAIT', 'Taking a breather.', `<p>${MISSION_STAGES[view.job.stage].task}</p>`, [
-      { label: 'BACK TO THE CITY', action: 'resume', value: '✕' },
-      { label: 'DISTRICT MAP', action: 'map' },
-      { label: 'RETRY CHECKPOINT', action: 'retry' },
-      { label: 'SETTINGS', action: 'options' },
-      { label: 'HOW TO PLAY', action: 'controls' },
-      { label: 'TITLE SCREEN', action: 'title' },
-    ]);
+    ui.panel(
+      'THE CITY CAN WAIT',
+      'Taking a breather.',
+      `<p>${view.job.cruise ? 'Cruise Saltwater Bay. Every neighborhood is open.' : MISSION_STAGES[view.job.stage].task}</p>`,
+      [
+        { label: 'BACK TO THE CITY', action: 'resume', value: '✕' },
+        { label: 'DISTRICT MAP', action: 'map' },
+        { label: 'RETRY CHECKPOINT', action: 'retry' },
+        { label: 'SETTINGS', action: 'options' },
+        { label: 'HOW TO PLAY', action: 'controls' },
+        { label: 'TITLE SCREEN', action: 'title' },
+      ],
+    );
   } else if (mode === 'paused' || mode === 'map') changeMode('playing');
   else if (mode !== 'title') back();
 }
@@ -103,8 +109,9 @@ ui.action = (action) => {
   void sound.unlock();
   sound.sfx('select');
   if (action === 'new') void start();
+  else if (action === 'cruise') void start(0, false, true);
   else if (action === 'continue') void start(save.checkpoint);
-  else if (action === 'retry') void start(lastCheckpoint);
+  else if (action === 'retry') void start(lastCheckpoint, false, view.job.cruise);
   else if (action === 'resume') changeMode('playing');
   else if (action === 'title') {
     changeMode('title');
@@ -118,7 +125,7 @@ ui.action = (action) => {
   } else if (action === 'map') {
     changeMode('map');
     drawMap($<HTMLCanvasElement>('full-map'), view, true);
-    setText('map-objective', MISSION_STAGES[view.job.stage].task);
+    setText('map-objective', view.job.cruise ? 'Cruise Saltwater Bay' : MISSION_STAGES[view.job.stage].task);
     ui.focus();
   } else {
     const s = save.settings;
@@ -178,7 +185,7 @@ document.addEventListener('visibilitychange', () => {
 function endRun(): void {
   if (mode === 'demo') {
     if (!endingAt) endingAt = performance.now();
-    if (performance.now() - endingAt > 6500) void start(0, true);
+    if (performance.now() - endingAt > 6500) void start(0, true, !view.job.cruise);
     return;
   }
   const j = view.job;
@@ -192,7 +199,7 @@ function endRun(): void {
     ui.panel(
       'MISSION COMPLETE',
       'The night is yours.',
-      `<p>The master tape is safe. Margo has your cut. For once, the city owes you something.</p><div class="summary-row"><div><strong>${j.score.toLocaleString()}</strong><span>REPUTATION</span></div><div><strong>${Math.floor(j.elapsed / 3600)}:${String(Math.floor(j.elapsed / 60) % 60).padStart(2, '0')}</strong><span>YOUR TIME</span></div><div><strong>${view.player.tapes}/5</strong><span>MIXTAPES</span></div></div><p>Best score: <strong>${save.bestScore.toLocaleString()}</strong>. Replay to find every mixtape and take the Ocean Sprint.</p>`,
+      `<p>The master tape is safe. Margo has your cut. For once, the city owes you something.</p><div class="summary-row"><div><strong>${j.score.toLocaleString()}</strong><span>REPUTATION</span></div><div><strong>${Math.floor(j.elapsed / 3600)}:${String(Math.floor(j.elapsed / 60) % 60).padStart(2, '0')}</strong><span>YOUR TIME</span></div><div><strong>${view.player.tapes}/${PICKUPS.length}</strong><span>MIXTAPES</span></div></div><p>Best score: <strong>${save.bestScore.toLocaleString()}</strong>. Replay to find every mixtape and take the Ocean Sprint.</p>`,
       [
         { label: 'ANOTHER NIGHT', action: 'new', value: '✕' },
         { label: 'TITLE SCREEN', action: 'title' },
@@ -216,7 +223,7 @@ function simStep(intents: Intents): void {
   const old = view;
   engine.step(1, intents);
   view = viewOf(engine);
-  if (mode !== 'demo' && view.job.stage !== lastCheckpoint) {
+  if (mode !== 'demo' && !view.job.cruise && view.job.stage !== lastCheckpoint) {
     lastCheckpoint = view.job.stage;
     save.checkpoint = lastCheckpoint;
     writeSave(save);
@@ -276,6 +283,7 @@ async function boot(): Promise<void> {
   Object.assign(window, { __engine: engine });
   try {
     if (!navigator.gpu) throw new Error('WebGPU is unavailable');
+    await prepareArt();
     renderer = new GameRenderer($<HTMLCanvasElement>('view'));
     renderer.sync(view, 0, 'title');
     await renderer.init();
@@ -287,7 +295,7 @@ async function boot(): Promise<void> {
       `<span>WebGPU is required. Open in a WebGPU-enabled Chrome, Edge, or Safari browser.<br><small>${String(error instanceof Error ? error.message : error)}</small></span>`;
     changeMode('title');
     document
-      .querySelectorAll<HTMLButtonElement>('[data-action=new],[data-action=continue]')
+      .querySelectorAll<HTMLButtonElement>('[data-action=new],[data-action=continue],[data-action=cruise]')
       .forEach((b) => (b.disabled = true));
   }
   requestAnimationFrame(frame);
@@ -298,6 +306,13 @@ async function boot(): Promise<void> {
         mode: () => mode,
         stats: () => renderer?.stats(),
         start,
+        autoplay: (active: boolean) => {
+          if (active) changeMode('demo');
+          else {
+            changeMode('playing');
+            paused();
+          }
+        },
         action: (s: string) => ui.action(s),
         step: (n: number, intents: Intents = {}) => {
           for (let i = 0; i < n; i++) simStep(intents);

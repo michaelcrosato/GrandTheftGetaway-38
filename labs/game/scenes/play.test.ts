@@ -1,34 +1,40 @@
 /** @file Game gates: complete bot play, golden replay, deterministic restore, checkpoints and systemic rules. */
 import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { createHeadless, type Headless } from '../../../engine';
+import { createHeadless, disposeHeadless, type Headless } from '../../../engine';
 import { play } from './play';
 import { botIntents, playBot, viewOf } from '../bot';
 import { blocked } from '../world/level';
+import { SHORE_X } from '../world/districts';
 const fresh = (checkpoint = 0, seed = 38) =>
   createHeadless({ scene: play, seed, settings: { 'game.checkpoint': checkpoint } });
 function advanceBot(h: Headless, ticks: number): void {
   for (let i = 0; i < ticks; i++) h.step(1, botIntents(viewOf(h)));
 }
 describe('One Last Delivery', () => {
-  it('completes every stage by ordinary intents on ten seeds', async () => {
-    for (let seed = 1; seed <= 10; seed++) {
+  it.each(Array.from({ length: 10 }, (_, i) => i + 1))(
+    'completes every stage by ordinary intents on seed %i',
+    async (seed) => {
       const h = await fresh(0, seed);
-      const stages = new Set<number>();
-      let v = viewOf(h);
-      for (let i = 0; i < 8500 && v.job.state === 'playing'; i++) {
-        stages.add(v.job.stage);
-        h.step(1, botIntents(v));
-        v = viewOf(h);
+      try {
+        const stages = new Set<number>();
+        let v = viewOf(h);
+        for (let i = 0; i < 8500 && v.job.state === 'playing'; i++) {
+          stages.add(v.job.stage);
+          h.step(1, botIntents(v));
+          v = viewOf(h);
+        }
+        expect({ seed, state: v.job.state }).toEqual({ seed, state: 'won' });
+        expect([...stages]).toEqual([0, 1, 2, 3, 4, 5]);
+        expect(v.job.kills).toBe(3);
+        expect(v.job.heat).toBe(0);
+        expect(v.job.delivered).toBe(true);
+        expect(v.player.cash).toBeGreaterThanOrEqual(2000);
+      } finally {
+        disposeHeadless(h);
       }
-      expect({ seed, state: v.job.state }).toEqual({ seed, state: 'won' });
-      expect([...stages]).toEqual([0, 1, 2, 3, 4, 5]);
-      expect(v.job.kills).toBe(3);
-      expect(v.job.heat).toBe(0);
-      expect(v.job.delivered).toBe(true);
-      expect(v.player.cash).toBeGreaterThanOrEqual(2000);
-    }
-  });
+    },
+  );
   it('continues identically after capture and restore, including physics and AI', async () => {
     const h = await fresh();
     advanceBot(h, 800);
@@ -62,7 +68,7 @@ describe('One Last Delivery', () => {
     expect(blocked(p.x, p.z, 0.4)).toBe(false);
     h.step(3000, { move: [1, 0], b: ['sprint'] });
     p = viewOf(h).player;
-    expect(p.x).toBeLessThanOrEqual(65.55);
+    expect(p.x).toBeLessThanOrEqual(SHORE_X - 0.4);
     expect(Number.isFinite(p.x)).toBe(true);
   });
   it('magazines expend, reload and draw from a finite reserve', async () => {

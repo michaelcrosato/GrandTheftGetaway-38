@@ -3,6 +3,7 @@ import { held, pressed, physicsOf, type Intents } from '../../../engine/sim-api'
 import { clamp, distance, jobOf, message, playerOf, type GameWorld } from './components';
 import { moveBody, roadTarget } from './motion';
 import { MISSION_STAGES } from '../world/level';
+import { ROADS, WORLD_LIMITS } from '../world/districts';
 export function sight(w: GameWorld, a: { x: number; z: number }, b: { x: number; z: number }): boolean {
   const d = distance(a, b);
   if (d < 0.01) return true;
@@ -84,7 +85,7 @@ export function citizens(w: GameWorld): void {
     n.shot = Math.max(0, n.shot - 1);
     if (n.hp <= 0 || n.role === 'contact') continue;
     if (n.role === 'guard') {
-      if (MISSION_STAGES[j.stage].kind !== 'clear') continue;
+      if (j.cruise || MISSION_STAGES[j.stage].kind !== 'clear') continue;
       const d = distance(p, n);
       if (d > 35) continue;
       n.yaw = Math.atan2(p.x - n.x, p.z - n.z);
@@ -116,6 +117,10 @@ export function police(w: GameWorld): void {
   let seen = false;
   for (const { vehicle: v } of w.query('vehicle')) {
     if (v.type !== 'police') continue;
+    if (j.heat > 0 && !v.active) {
+      v.x = [...ROADS.vertical].sort((a, b) => Math.abs(a - p.x) - Math.abs(b - p.x))[0];
+      v.z = clamp(p.z + 48, WORLD_LIMITS.minZ + 12, WORLD_LIMITS.maxZ - 12);
+    }
     v.active = j.heat > 0;
     if (!v.active) continue;
     const d = distance(v, p);

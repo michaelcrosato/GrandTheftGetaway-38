@@ -310,8 +310,14 @@ h1 strong {
 }
 #loading {
   position: absolute;
-  left: var(--edge);
-  bottom: 110px;
+  left: auto;
+  right: var(--edge);
+  top: 96px;
+  max-width: min(420px, 42vw);
+  padding: 12px 16px;
+  background: #203747d9;
+  border-left: 2px solid var(--pink);
+  bottom: auto;
   display: flex;
   gap: 13px;
   align-items: center;
@@ -794,7 +800,9 @@ body[data-mode='map'] #masthead {
     display: none;
     left: 20px;
     right: 20px;
-    bottom: 30px;
+    top: auto;
+    max-width: none;
+    bottom: 20px;
     font-size: 10px;
   }
   body[data-mobile-menu='true'] #loading {

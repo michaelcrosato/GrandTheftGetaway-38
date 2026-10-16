@@ -9,7 +9,9 @@ function unsupported(reason: string): void {
   save.checkpoint = 0;
   const showTitle = () => {
     ui.mode('title', save);
-    document.querySelector<HTMLButtonElement>('[data-action=new]')!.disabled = true;
+    document
+      .querySelectorAll<HTMLButtonElement>('[data-action=new],[data-action=cruise]')
+      .forEach((b) => (b.disabled = true));
   };
   showTitle();
   $('loading').innerHTML =

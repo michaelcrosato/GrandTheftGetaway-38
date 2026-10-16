@@ -1,6 +1,6 @@
 {
   "name": "grand-theft-getaway-38",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Grand Theft Getaway: One Last Delivery, a controller-first coastal action game built on my-3dge.",
   "type": "module",
@@ -18,7 +18,9 @@
     "bot": "tsx labs/game/qa/bot-check.ts",
     "record": "tsx labs/game/qa/record.ts && prettier --write labs/game/replays/bot.replay.json",
     "e2e": "node labs/game/qa/browser.mjs",
-    "build:pages": "vite build --base=/GrandTheftGetaway-38/"
+    "build:pages": "vite build --base=/GrandTheftGetaway-38/",
+    "art": "tsx labs/game/qa/export-art.ts && prettier --write labs/art/manifest.json",
+    "e2e:city": "node labs/game/qa/expansion.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-simd-compat": "0.21.0",

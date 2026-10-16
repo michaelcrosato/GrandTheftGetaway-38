@@ -1,28 +1,9 @@
 /** @file Saltwater Bay: shared, readable content for collision, navigation and rendering. Metres, +Y up. */
-export interface Building {
-  x: number;
-  z: number;
-  w: number;
-  d: number;
-  h: number;
-  color: string;
-  name?: string;
-  accent?: string;
-  roofDeck?: boolean;
-}
-export const BUILDINGS: Building[] = [
-  { x: -4, z: 124, w: 40, d: 27, h: 15, color: '#f1c0ac', name: 'THE PALMS', accent: '#ff6fbc' },
-  { x: -6, z: 62, w: 38, d: 33, h: 19, color: '#b7d7cf', name: 'HOTEL AZUL', accent: '#62fff0' },
-  { x: -5, z: 22, w: 39, d: 26, h: 11, color: '#eabccf', name: 'PARADISO', accent: '#ffd175' },
-  { x: -5, z: -39, w: 39, d: 47, h: 23, color: '#c9bbd4', name: 'OCEANIC', accent: '#ff7fb3' },
-  { x: -5, z: -143, w: 39, d: 33, h: 13, color: '#cce5d0', name: 'MARINA CLUB', accent: '#f6d590' },
-  { x: -83, z: 116, w: 49, d: 28, h: 30, color: '#b9b9d3', name: 'SOLSTICE', accent: '#91dfff' },
-  { x: -80, z: 70, w: 38, d: 28, h: 8, color: '#db9cb8', name: 'CLUB MIRAGE', accent: '#ff82b8', roofDeck: true },
-  { x: -82, z: 25, w: 48, d: 28, h: 18, color: '#ddcbbb', name: 'CASA LUNA', accent: '#f9b35f' },
-  { x: -83, z: -48, w: 44, d: 40, h: 17, color: '#9fccc8', name: 'SUNSET MOTORS', accent: '#6af0d4' },
-  { x: -83, z: -126, w: 44, d: 40, h: 24, color: '#c7b2cd', name: 'RADIO 88.4', accent: '#fd8fb4' },
-];
-export const ROADS = { vertical: [-42, 30], horizontal: [-96, 0, 96], halfWidth: 8 };
+import { WORLD_LIMITS, SHORE_X, PIERS } from './districts';
+import { collides } from './collision';
+export { BUILDINGS } from './blocks';
+export { ROADS, WORLD_LIMITS } from './districts';
+export type { Building } from './districts';
 export const LOCATIONS = {
   start: { x: 37, z: 108 },
   phone: { x: 39, z: 99 },
@@ -39,12 +20,29 @@ export const PICKUPS = [
   { x: -35, z: 45 },
   { x: -57, z: -86 },
   { x: 8, z: -114 },
-];
-export const TRAFFIC_ROUTE = [
-  { x: 27, z: 93 },
-  { x: 27, z: -99 },
-  { x: -45, z: -99 },
-  { x: -45, z: 93 },
+  ...[
+    [-150, -230],
+    [-30, -400],
+    [45, -330],
+    [-342, -330],
+    [-270, -205],
+    [-438, -330],
+    [-558, -250],
+    [-480, -228],
+    [-558, -112],
+    [-340, 42],
+    [-275, 55],
+    [-220, -12],
+    [-490, 150],
+    [-560, 310],
+    [-465, 210],
+    [-298, 238],
+    [-230, 300],
+    [-342, 400],
+    [18, 230],
+    [46, 300],
+    [-150, 400],
+  ].map(([x, z]) => ({ x, z })),
 ];
 export const RACE_GATES = [
   { x: 30, z: 0 },
@@ -54,7 +52,7 @@ export const RACE_GATES = [
   { x: -42, z: 96 },
   { x: 30, z: 96 },
 ];
-export const WORLD_LIMITS = { minX: -114, maxX: 66, minZ: -166, maxZ: 162 };
+
 export const MISSION_STAGES = [
   {
     kind: 'call',
@@ -127,7 +125,12 @@ export function blocked(x: number, z: number, radius: number, roof = false): boo
     z > WORLD_LIMITS.maxZ - radius
   )
     return true;
-  return BUILDINGS.some((b) => Math.abs(x - b.x) < b.w / 2 + radius && Math.abs(z - b.z) < b.d / 2 + radius);
+  if (
+    x > SHORE_X - radius &&
+    !PIERS.some((p) => Math.abs(x - p.x) < p.w / 2 - radius && Math.abs(z - p.z) < p.d / 2 - radius)
+  )
+    return true;
+  return collides(x, z, radius);
 }
 
 /** Checkpoint content is declarative; supply one record per mission stage. */

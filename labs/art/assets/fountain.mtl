@@ -1,0 +1,18 @@
+# Original material palette; RGB diffuse colours.
+newmtl color_c4b9ac
+Kd 0.76863 0.72549 0.67451
+Ka 0.15 0.15 0.15
+Ks 0.1 0.1 0.1
+Ns 24
+
+newmtl color_65b7bb
+Kd 0.39608 0.71765 0.73333
+Ka 0.15 0.15 0.15
+Ks 0.1 0.1 0.1
+Ns 24
+
+newmtl color_e9d5bb
+Kd 0.91373 0.83529 0.73333
+Ka 0.15 0.15 0.15
+Ks 0.1 0.1 0.1
+Ns 24

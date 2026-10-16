@@ -26,9 +26,10 @@ export interface RenderOptions {
 }
 export class GameRenderer {
   renderer: WebGPURenderer;
+  city: ReturnType<typeof createCity>;
   scene = new RenderScene();
-  camera = new PerspectiveCamera(58, 1, 0.1, 700);
-  cars = new Map<number, { group: Group; color: string }>();
+  camera = new PerspectiveCamera(58, 1, 0.1, 1400);
+  cars = new Map<number, { group: Group; color: string; model: string }>();
   people = new Map<number, PersonModel>();
   hero = personModel('player');
   ring: Mesh;
@@ -54,7 +55,7 @@ export class GameRenderer {
     this.renderer = new WebGPURenderer({ canvas, antialias: true, alpha: false });
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
-    createCity(this.scene);
+    this.city = createCity(this.scene);
     this.scene.add(this.hero.group);
     this.ring = new Mesh(
       new TorusGeometry(2.1, 0.065, 6, 40),
@@ -106,19 +107,19 @@ export class GameRenderer {
     for (const v of view.cars) {
       let model = this.cars.get(v.id);
       if (!model) {
-        model = { group: carModel(v.color, v.type === 'police'), color: v.color };
+        model = { group: carModel(v.color, v.type === 'police', v.model), color: v.color, model: v.model };
         this.cars.set(v.id, model);
         this.scene.add(model.group);
       }
-      if (model.color !== v.color) {
+      if (model.color !== v.color || model.model !== v.model) {
         this.scene.remove(model.group);
-        model = { group: carModel(v.color, v.type === 'police'), color: v.color };
+        model = { group: carModel(v.color, v.type === 'police', v.model), color: v.color, model: v.model };
         this.cars.set(v.id, model);
         this.scene.add(model.group);
       }
       model.group.position.set(v.x, 0, v.z);
       model.group.rotation.y = v.yaw;
-      model.group.visible = v.active;
+      model.group.visible = v.active && Math.hypot(v.x - p.x, v.z - p.z) < 220;
       if (v.type === 'police') model.group.position.y = Math.sin(time * 18) * 0.015;
     }
     this.hero.group.position.set(p.x, p.y + p.jump, p.z);
@@ -132,9 +133,10 @@ export class GameRenderer {
         this.people.set(n.id, model);
         this.scene.add(model.group);
       }
+      model.group.visible = Math.hypot(n.x - p.x, n.z - p.z) < 115;
       model.group.position.set(n.x, n.role === 'contact' ? 8 : 0, n.z);
       model.group.rotation.y = n.yaw;
-      animatePerson(model, n.role === 'pedestrian' ? 1.4 : 0, time + i, n.alert > 0.2, n.hp <= 0);
+      animatePerson(model, !['guard', 'contact'].includes(n.role) ? 1.4 : 0, time + i, n.alert > 0.2, n.hp <= 0);
     });
     view.pickups.forEach((c, i) => {
       if (!this.pickups[i]) {
@@ -151,16 +153,16 @@ export class GameRenderer {
     const goal = j.race >= 0 ? RACE_GATES[j.race] : MISSION_STAGES[Math.min(5, j.stage)].target;
     this.ring.position.set(goal.x, (j.stage === 5 ? 8 : 0) + 0.16, goal.z);
     this.ring.scale.setScalar(1 + Math.sin(time * 3) * 0.07);
-    this.ring.visible = j.state === 'playing';
+    this.ring.visible = j.state === 'playing' && (!j.cruise || j.race >= 0);
     this.tape.position.set(LOCATIONS.tape.x, 1.2 + Math.sin(time * 2) * 0.15, LOCATIONS.tape.z);
     this.tape.rotation.y = time;
-    this.tape.visible = j.stage <= 2;
+    this.tape.visible = !j.cruise && j.stage <= 2;
     this.tracer.visible = p.shot > 2;
     this.updateLine(this.tracer, [p.x, p.y + 1.4, p.z], [p.shotX, p.y + 1.1, p.shotZ]);
     const guards = view.npcs.filter((n) => n.role === 'guard');
     guards.forEach((n, i) => {
       const l = this.enemyTracers[i];
-      l.visible = n.hp > 0 && j.stage === 2 && (n.shot > 0 || n.alert > 0.75);
+      l.visible = !j.cruise && n.hp > 0 && j.stage === 2 && (n.shot > 0 || n.alert > 0.75);
       this.updateLine(l, [n.x, 1.3, n.z], [p.x, p.y + 0.7, p.z]);
     });
     const menu = mode === 'title' || mode === 'options' || mode === 'controls' || mode === 'credits';
@@ -194,13 +196,19 @@ export class GameRenderer {
           break;
         }
       }
-      const smoothing = this.options.reducedMotion || Math.abs(p.y - this.lastLayer) > 3 ? 1 : 0.13;
+      const smoothing =
+        this.options.reducedMotion ||
+        Math.abs(p.y - this.lastLayer) > 3 ||
+        this.camera.position.distanceTo(this.eye) > 45
+          ? 1
+          : 0.13;
       this.lastLayer = p.y;
       this.camera.position.lerp(this.eye, smoothing);
       this.camera.lookAt(this.target);
       this.camera.fov = p.car ? 60 + Math.min(9, p.moving * 0.3) : 58;
     }
     this.camera.updateProjectionMatrix();
+    this.city.update(this.camera.position.x, this.camera.position.z);
   }
   updateLine(l: Line, a: number[], b: number[]): void {
     const pos = l.geometry.attributes.position;
@@ -226,6 +234,8 @@ export class GameRenderer {
   }
   stats(): object {
     return {
+      frames: this.frames,
+      lastFrameAgo: performance.now() - this.lastTime,
       fps: this.fps,
       frameMs: this.frameMs,
       averageFPS: this.frames / (this.totalTime / 1000),
@@ -233,6 +243,7 @@ export class GameRenderer {
       triangles: this.renderer.info.render.triangles,
       resolution: this.resolution,
       backend: 'WebGPU',
+      city: this.city.stats(),
     };
   }
 }
