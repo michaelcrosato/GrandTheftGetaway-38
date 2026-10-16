@@ -1,0 +1,47 @@
+{
+  "name": "grand-theft-getaway-38",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Grand Theft Getaway: One Last Delivery, a controller-first coastal action game built on my-3dge.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.10 <25"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -b tsconfig.check.json",
+    "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ .",
+    "format": "prettier --write --cache .",
+    "check": "node tools/checkAll.ts",
+    "test": "vitest run",
+    "bot": "tsx labs/game/qa/bot-check.ts",
+    "record": "tsx labs/game/qa/record.ts && prettier --write labs/game/replays/bot.replay.json",
+    "e2e": "node labs/game/qa/browser.mjs",
+    "build:pages": "vite build --base=/GrandTheftGetaway-38/"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-simd-compat": "0.21.0",
+    "@stdlib/math-base-special-cos": "0.3.1",
+    "@stdlib/math-base-special-pow": "0.3.1",
+    "@stdlib/math-base-special-sin": "0.3.1",
+    "three": "0.182.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/three": "0.182.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsdoc": "61.7.1",
+    "globals": "16.5.0",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2",
+    "vite": "7.3.7",
+    "vitest": "3.2.7"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}

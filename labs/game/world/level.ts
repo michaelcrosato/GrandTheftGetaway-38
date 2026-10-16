@@ -1,0 +1,195 @@
+/** @file Saltwater Bay: shared, readable content for collision, navigation and rendering. Metres, +Y up. */
+export interface Building {
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  h: number;
+  color: string;
+  name?: string;
+  accent?: string;
+  roofDeck?: boolean;
+}
+export const BUILDINGS: Building[] = [
+  { x: -4, z: 124, w: 40, d: 27, h: 15, color: '#f1c0ac', name: 'THE PALMS', accent: '#ff6fbc' },
+  { x: -6, z: 62, w: 38, d: 33, h: 19, color: '#b7d7cf', name: 'HOTEL AZUL', accent: '#62fff0' },
+  { x: -5, z: 22, w: 39, d: 26, h: 11, color: '#eabccf', name: 'PARADISO', accent: '#ffd175' },
+  { x: -5, z: -39, w: 39, d: 47, h: 23, color: '#c9bbd4', name: 'OCEANIC', accent: '#ff7fb3' },
+  { x: -5, z: -143, w: 39, d: 33, h: 13, color: '#cce5d0', name: 'MARINA CLUB', accent: '#f6d590' },
+  { x: -83, z: 116, w: 49, d: 28, h: 30, color: '#b9b9d3', name: 'SOLSTICE', accent: '#91dfff' },
+  { x: -80, z: 70, w: 38, d: 28, h: 8, color: '#db9cb8', name: 'CLUB MIRAGE', accent: '#ff82b8', roofDeck: true },
+  { x: -82, z: 25, w: 48, d: 28, h: 18, color: '#ddcbbb', name: 'CASA LUNA', accent: '#f9b35f' },
+  { x: -83, z: -48, w: 44, d: 40, h: 17, color: '#9fccc8', name: 'SUNSET MOTORS', accent: '#6af0d4' },
+  { x: -83, z: -126, w: 44, d: 40, h: 24, color: '#c7b2cd', name: 'RADIO 88.4', accent: '#fd8fb4' },
+];
+export const ROADS = { vertical: [-42, 30], horizontal: [-96, 0, 96], halfWidth: 8 };
+export const LOCATIONS = {
+  start: { x: 37, z: 108 },
+  phone: { x: 39, z: 99 },
+  car: { x: 30, z: 104 },
+  marina: { x: 30, z: -96 },
+  tape: { x: 5, z: -100 },
+  garage: { x: -43, z: -14 },
+  club: { x: -49, z: 73 },
+  roof: { x: -69, z: 70 },
+};
+export const PICKUPS = [
+  { x: 47, z: 51 },
+  { x: 47, z: -50 },
+  { x: -35, z: 45 },
+  { x: -57, z: -86 },
+  { x: 8, z: -114 },
+];
+export const TRAFFIC_ROUTE = [
+  { x: 27, z: 93 },
+  { x: 27, z: -99 },
+  { x: -45, z: -99 },
+  { x: -45, z: 93 },
+];
+export const RACE_GATES = [
+  { x: 30, z: 0 },
+  { x: 30, z: -96 },
+  { x: -42, z: -96 },
+  { x: -42, z: 0 },
+  { x: -42, z: 96 },
+  { x: 30, z: 96 },
+];
+export const WORLD_LIMITS = { minX: -114, maxX: 66, minZ: -166, maxZ: 162 };
+export const MISSION_STAGES = [
+  {
+    kind: 'call',
+    radius: 4,
+    title: 'A call from Margo',
+    task: 'Answer the payphone',
+    detail: 'Your last job starts on Ocean Drive.',
+    radio: 'MARGO',
+    line: 'One tape. One delivery. Then we are out of this town.',
+    target: LOCATIONS.phone,
+  },
+  {
+    kind: 'drive',
+    radius: 11,
+    title: 'Borrowed horsepower',
+    task: 'Take the Cobalt to the marina',
+    detail: 'Get in the blue convertible. Follow the coast north.',
+    radio: 'MARGO',
+    line: 'They took our master tape. Marina. Blue car. You know the drill.',
+    target: LOCATIONS.marina,
+  },
+  {
+    kind: 'clear',
+    radius: 3.5,
+    title: 'The wrong crowd',
+    task: 'Recover the master tape',
+    detail: 'Leave the car. Deal with the three lookouts. Grab the tape.',
+    radio: 'MARGO',
+    line: 'Looks like they brought company. Keep it clean, get our music back.',
+    target: LOCATIONS.tape,
+  },
+  {
+    kind: 'escape',
+    radius: 0,
+    title: 'Heat on the boulevard',
+    task: 'Lose the police',
+    detail: 'Break line of sight. Sunset Motors can fix your ride.',
+    radio: 'DISPATCH',
+    line: 'All units. Blue convertible. Last seen at the marina.',
+    target: LOCATIONS.garage,
+  },
+  {
+    kind: 'lift',
+    radius: 5,
+    title: 'Above the city',
+    task: 'Deliver to Club Mirage',
+    detail: 'Park by the club and take the service lift to the roof.',
+    radio: 'MARGO',
+    line: 'Beautiful. Bring the tape to my rooftop. Drinks are on me.',
+    target: LOCATIONS.club,
+  },
+  {
+    kind: 'handoff',
+    radius: 4,
+    title: 'One last delivery',
+    task: 'Give Margo the tape',
+    detail: 'Your future is on the other side of this dance floor.',
+    radio: 'MARGO',
+    line: 'Hear that? That is the sound of a fresh start.',
+    target: LOCATIONS.roof,
+  },
+] as const;
+/** Safe circles against buildings and the edge; the rooftop is its own navigation surface. */
+export function blocked(x: number, z: number, radius: number, roof = false): boolean {
+  if (roof) return x < -97 + radius || x > -63 - radius || z < 58 + radius || z > 82 - radius;
+  if (
+    x < WORLD_LIMITS.minX + radius ||
+    x > WORLD_LIMITS.maxX - radius ||
+    z < WORLD_LIMITS.minZ + radius ||
+    z > WORLD_LIMITS.maxZ - radius
+  )
+    return true;
+  return BUILDINGS.some((b) => Math.abs(x - b.x) < b.w / 2 + radius && Math.abs(z - b.z) < b.d / 2 + radius);
+}
+
+/** Checkpoint content is declarative; supply one record per mission stage. */
+export const CHECKPOINTS = [
+  {
+    player: LOCATIONS.start,
+    car: LOCATIONS.car,
+    y: 0,
+    yaw: Math.PI,
+    inCar: false,
+    heat: 0,
+    guardsAlive: true,
+    tape: false,
+  },
+  {
+    player: LOCATIONS.start,
+    car: LOCATIONS.car,
+    y: 0,
+    yaw: Math.PI,
+    inCar: false,
+    heat: 0,
+    guardsAlive: true,
+    tape: false,
+  },
+  {
+    player: { x: 30, z: -91 },
+    car: { x: 30, z: -91 },
+    y: 0,
+    yaw: Math.PI,
+    inCar: true,
+    heat: 0,
+    guardsAlive: true,
+    tape: false,
+  },
+  {
+    player: LOCATIONS.tape,
+    car: { x: 30, z: -96 },
+    y: 0,
+    yaw: Math.PI,
+    inCar: false,
+    heat: 2,
+    guardsAlive: false,
+    tape: true,
+  },
+  {
+    player: { x: -42, z: -14 },
+    car: { x: -42, z: -14 },
+    y: 0,
+    yaw: 0,
+    inCar: true,
+    heat: 0,
+    guardsAlive: false,
+    tape: true,
+  },
+  {
+    player: { x: -65, z: 70 },
+    car: LOCATIONS.car,
+    y: 8,
+    yaw: -Math.PI / 2,
+    inCar: false,
+    heat: 0,
+    guardsAlive: false,
+    tape: true,
+  },
+];
