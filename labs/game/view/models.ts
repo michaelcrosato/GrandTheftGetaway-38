@@ -1,7 +1,8 @@
 /** @file Original low-poly vehicles and articulated characters, assembled entirely from geometry. */
 import { Group, Mesh, MeshBasicMaterial, CircleGeometry } from '../../../engine';
 import { BOX, CYL, BALL, piece, compact } from './primitives';
-export function carModel(color: string, police = false): Group {
+import { vehicleBody } from '../art/vehicles';
+export function carModel(color: string, police = false, variant = 'cabriolet'): Group {
   const g = new Group();
   piece(g, BOX, color, [0, 0.69, 0], [1.95, 0.55, 4.3]);
   piece(g, BOX, color, [0, 0.99, 1.15], [1.87, 0.18, 1.65]);
@@ -28,6 +29,7 @@ export function carModel(color: string, police = false): Group {
     piece(g, BOX, '#ff5973', [-0.4, 1.89, -0.2], [0.6, 0.2, 0.3], [], 1);
     piece(g, BOX, '#63c7ff', [0.4, 1.89, -0.2], [0.6, 0.2, 0.3], [], 1);
   }
+  vehicleBody(g, color, variant);
   const result = compact(g);
   result.add(shadow(2.9, 5.6));
   return result;
@@ -52,6 +54,10 @@ export function personModel(role: string, index = 0): PersonModel {
   const g = new Group(),
     body = new Group();
   g.add(body);
+  const citizen = role !== 'player' && role !== 'guard' && role !== 'contact';
+  const outfit =
+    role === 'worker' ? 2 : role === 'visitor' ? 1 : role === 'vendor' ? 5 : role === 'office' ? 3 : index % 6;
+  const skin = role === 'contact' ? '#aa735a' : ['#d79b77', '#aa735a', '#e2b18e'][index % 3];
   const shirt =
     role === 'player'
       ? '#6be6dc'
@@ -59,10 +65,10 @@ export function personModel(role: string, index = 0): PersonModel {
         ? '#77475f'
         : role === 'contact'
           ? '#fff1c8'
-          : ['#ef9bb6', '#85c5bf', '#eecca0'][index % 3];
+          : ['#ef9bb6', '#d68e79', '#e5b667', '#354e61', '#84beb6', '#e5d5b7'][outfit];
   piece(body, CYL, shirt, [0, 1.22, 0], [0.34, 0.7, 0.23]);
-  piece(body, BALL, '#d79b77', [0, 1.83, 0.01], [0.23, 0.27, 0.21]);
-  piece(body, BALL, '#29243b', [0, 2, 0], [0.24, 0.15, 0.22]);
+  piece(body, BALL, skin, [0, 1.83, 0.01], [0.23, 0.27, 0.21]);
+  piece(body, BALL, citizen ? ['#29243b', '#725642', '#b19c78'][index % 3] : '#29243b', [0, 2, 0], [0.24, 0.15, 0.22]);
   if (role === 'player') {
     piece(body, BOX, '#203045', [0, 1.87, 0.18], [0.36, 0.075, 0.04]);
     piece(body, BOX, '#f2dbaa', [0, 1.46, 0.19], [0.08, 0.14, 0.035]);
@@ -73,7 +79,15 @@ export function personModel(role: string, index = 0): PersonModel {
     const l = new Group();
     l.position.set(x, 0.93, 0);
     body.add(l);
-    piece(l, BOX, role === 'player' ? '#eae3cb' : '#25384b', [0, -0.4, 0], [0.24, 0.8, 0.28]);
+    piece(
+      l,
+      BOX,
+      role === 'player' ? '#eae3cb' : citizen && [1, 4].includes(outfit) ? skin : '#25384b',
+      [0, -0.4, 0],
+      [0.24, 0.8, 0.28],
+    );
+    if (citizen && [1, 4].includes(outfit))
+      piece(l, BOX, outfit === 1 ? '#6caab5' : '#d5bd94', [0, -0.18, 0], [0.25, 0.38, 0.3]);
     piece(l, BOX, '#f3e8d5', [0, -0.85, 0.055], [0.25, 0.13, 0.42]);
     legs.push(l);
   }
@@ -82,8 +96,38 @@ export function personModel(role: string, index = 0): PersonModel {
     a.position.set(x, 1.49, 0);
     body.add(a);
     piece(a, BOX, shirt, [0, -0.16, 0], [0.22, 0.35, 0.28]);
-    piece(a, BOX, '#d79b77', [0, -0.42, 0], [0.18, 0.28, 0.21]);
+    piece(a, BOX, skin, [0, -0.42, 0], [0.18, 0.28, 0.21]);
     arms.push(a);
+  }
+  if (citizen) {
+    if (outfit === 0)
+      for (const [x, y] of [
+        [-0.18, 1.3],
+        [0.14, 1.12],
+        [0.12, 1.4],
+      ])
+        piece(body, BALL, '#ffe5bd', [x, y, 0.23], [0.07, 0.065, 0.02]);
+    if (outfit === 1) {
+      piece(body, CYL, '#e5c494', [0, 2.06, 0], [0.38, 0.055, 0.38]);
+      piece(body, CYL, '#e5c494', [0, 2.15, 0], [0.23, 0.18, 0.23]);
+    }
+    if (outfit === 2) {
+      piece(body, BOX, '#ece4c7', [0, 1.2, 0.24], [0.63, 0.075, 0.035]);
+      piece(body, BALL, '#e5b667', [0, 2.03, 0], [0.26, 0.2, 0.24]);
+      piece(body, BOX, '#e5b667', [0, 2.02, 0.15], [0.5, 0.04, 0.3]);
+    }
+    if (outfit === 3) {
+      piece(body, BOX, '#f1dfc7', [0, 1.38, 0.24], [0.16, 0.3, 0.03]);
+      piece(body, BOX, '#b47a8e', [0, 1.25, 0.27], [0.05, 0.35, 0.025]);
+    }
+    if (outfit === 4) {
+      piece(body, BOX, '#263c49', [0, 1.1, 0.29], [0.27, 0.18, 0.12]);
+      piece(body, CYL, '#8ba9af', [0, 1.1, 0.37], [0.075, 0.05, 0.075], [Math.PI / 2, 0, 0]);
+    }
+    if (outfit === 5) {
+      piece(body, BOX, '#d397a8', [0, 1.05, 0.24], [0.45, 0.6, 0.035]);
+      piece(body, CYL, '#e4d1ad', [0, 2.07, 0], [0.28, 0.17, 0.28]);
+    }
   }
   if (role === 'guard' || role === 'player') piece(arms[1], BOX, '#293045', [0, -0.5, 0.18], [0.12, 0.17, 0.4]);
   g.add(shadow(1.3, 1.3));

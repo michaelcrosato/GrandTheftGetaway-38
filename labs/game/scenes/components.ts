@@ -35,6 +35,8 @@ export interface Vehicle {
   type: string;
   color: string;
   route: number;
+  circuit: number;
+  model: string;
   active: boolean;
   flash: number;
 }
@@ -52,6 +54,8 @@ export interface Npc {
   shot: number;
 }
 export interface Mission {
+  cruise: boolean;
+  discovered: number;
   stage: number;
   ticks: number;
   state: string;
@@ -117,6 +121,8 @@ defineComponent('vehicle', {
     speed: number(),
     hp: number(100),
     type: text('traffic'),
+    circuit: number(),
+    model: text('cabriolet'),
     color: text('#f5c791'),
     route: number(),
     active: bool(true),
@@ -142,6 +148,8 @@ defineComponent('citizen', {
 defineComponent('job', {
   description: 'Mission, wanted, checkpoint and optional street sprint state.',
   fields: {
+    cruise: bool(),
+    discovered: number(),
     stage: number(),
     ticks: number(),
     state: text('playing'),

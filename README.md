@@ -2,9 +2,17 @@
 
 **Good weather. Bad decisions.** An original, controller-first coastal crime-action game set in Saltwater Bay, 1987.
 
-Play one complete mission: answer Margo's call, take a convertible to the marina, recover a stolen master tape, lose the police and deliver it to the rooftop of Club Mirage. A living district adds traffic, pedestrians, five hidden mixtapes, a repair garage and the Ocean Sprint time trial. Leave the title idle for ten seconds and the autonomous demo takes over; any input brings you back.
+Play one complete mission: answer Margo's call, take a convertible to the marina, recover a stolen master tape, lose the police and deliver it to the rooftop of Club Mirage. A living district adds traffic, pedestrians, 26 hidden mixtapes, a repair garage and the Ocean Sprint time trial. Leave the title idle for ten seconds and the autonomous demo takes over; any input brings you back.
 
 **[Play the game](https://michaelcrosato.github.io/GrandTheftGetaway-38/)** · **[Controls and development](labs/game/README.md)** · **[Architecture](docs/game/ARCHITECTURE.md)** · **[Verification](docs/game/VERIFICATION.md)** · **[Engine evaluation](docs/game/ENGINE-EVALUATION.md)**
+
+## City expansion — v1.1
+
+Saltwater Bay is now **10.46× larger**, with **eight districts, 145 buildings and 1,004 placed props**. Choose **Cruise the City** to explore without a mission deadline. The attract loop alternates the original mission and a complete city tour.
+
+**[Browse the 101-asset art library](https://michaelcrosato.github.io/GrandTheftGetaway-38/labs/art/)** · **[Portable models and editable sources](labs/art/README.md)** · **[Expansion details](docs/game/CITY-EXPANSION.md)**
+
+The original art library includes 93 OBJ/MTL models with vector previews and eight illustrated SVG signs. The same recipes create the in-game city, vehicles and characters. `npm run art` regenerates the portable exports.
 
 ## Run locally
 

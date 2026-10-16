@@ -1,9 +1,15 @@
 # Grand Theft Getaway-38
 
 **One Last Delivery** is an original coastal crime-action vertical slice set in Saltwater Bay, 1987.
-Answer Margo's call, borrow a convertible, recover her master tape from the marina, escape the police and make a rooftop handoff. Explore the district, collect five mixtapes, repair at Sunset Motors and race the six-gate Ocean Sprint.
+Answer Margo's call, borrow a convertible, recover her master tape from the marina, escape the police and make a rooftop handoff. Explore the district, collect 26 mixtapes, repair at Sunset Motors and race the six-gate Ocean Sprint.
 
 The game is built from the pinned my-3dge scaffold, with its deterministic 60 Hz ECS, named random streams, Rapier world queries, capture/restore and replay system. All geometry, animation and music are original procedural content. The presentation uses the engine's pinned WebGPU renderer through a documented public API extension.
+
+## City expansion
+
+The playable mainland is now 10.46× larger: eight districts, 145 buildings, 1,004 placed props and eight drivable vehicle body styles. **Cruise the City** starts a free exploration run with neighborhood discovery and 26 mixtapes, without replacing your story checkpoint. Attract mode alternates the mission with an ordinary-input tour through all eight districts.
+
+The [art gallery](../art/) contains 101 original assets with portable OBJ/MTL models, vector previews, illustrated SVG signs and editable source links. See [the art-library README](../art/README.md) and [expansion notes](../../docs/game/CITY-EXPANSION.md).
 
 ## Play
 
@@ -11,7 +17,7 @@ The game is built from the pinned my-3dge scaffold, with its deterministic 60 Hz
 
 A standard mapped controller is primary: left stick moves/steers; right stick looks; R2 accelerates/fires; L2 brakes/reverses; Triangle enters, exits and interacts; Cross jumps/confirms; Square reloads; R1 sprints; L1 changes weapon; Circle is the handbrake/back action; Options pauses; touchpad opens the map; D-pad Up starts the optional street sprint. Keyboard equivalents are displayed in the game and How to Play.
 
-Title inactivity of 10 seconds starts an actual autonomous playthrough. The bot uses ordinary player intents, completes the mission, waits at the ending and begins again. Any key, pointer movement, wheel, pointer press, gamepad button or stick input immediately returns to the title. Attract runs never overwrite player saves. No virtual joysticks or mobile action buttons exist.
+Title inactivity of 10 seconds starts an actual autonomous playthrough. The bot uses ordinary player intents, completes the mission, waits at the ending and begins an autonomous city tour. Any key, pointer movement, wheel, pointer press, gamepad button or stick input immediately returns to the title. Attract runs never overwrite player saves. No virtual joysticks or mobile action buttons exist.
 
 ## Verification and handoff
 

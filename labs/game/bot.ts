@@ -2,6 +2,7 @@
 import type { Headless, Intents } from '../../engine';
 import { LOCATIONS, MISSION_STAGES } from './world/level';
 import { distance, type Player, type Vehicle, type Npc, type Mission, type Pickup } from './scenes/components';
+import { TOUR_ROUTE } from './world/districts';
 import { roadTarget } from './scenes/motion';
 export interface GameView {
   player: Player;
@@ -46,6 +47,12 @@ export function botIntents(view: GameView): Intents {
   const usable = cars
     .filter((v) => v.active && v.hp > 0 && v.type !== 'police')
     .sort((a, b) => distance(p, a) - distance(p, b))[0];
+  if (j.cruise) {
+    if (!car) return distance(p, usable) < 4 ? { p: ['interact'] } : walk(p, usable);
+    const index = Math.min(j.route, TOUR_ROUTE.length - 1),
+      target = TOUR_ROUTE[index];
+    return { ...drive(car, roadTarget(car, target)), 'game:route': distance(car, target) < 9 ? index + 1 : index };
+  }
   if (kind === 'call') return distance(p, LOCATIONS.phone) < 3 ? { p: ['interact'] } : walk(p, LOCATIONS.phone);
   if (kind === 'clear') {
     if (car) return Math.abs(car.speed) > 1 ? { 'game:throttle': 0, b: ['brake'] } : { p: ['interact'] };

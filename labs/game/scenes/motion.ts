@@ -1,6 +1,7 @@
 /** @file Arcade vehicle handling, possession, collisions, pedestrian movement and jump simulation. */
 import { held, pressed, type Intents } from '../../../engine/sim-api';
-import { blocked, TRAFFIC_ROUTE, LOCATIONS } from '../world/level';
+import { blocked, LOCATIONS } from '../world/level';
+import { TRAFFIC_ROUTES, ROADS } from '../world/districts';
 import { clamp, distance, jobOf, message, playerOf, type GameWorld, type Vehicle } from './components';
 export function moveBody(
   body: { x: number; z: number },
@@ -137,10 +138,11 @@ export function traffic(w: GameWorld): void {
   for (const e of w.query('vehicle')) {
     const v = e.vehicle;
     if (e.id === p.car || v.type !== 'traffic' || !v.active) continue;
-    const target = TRAFFIC_ROUTE[v.route % TRAFFIC_ROUTE.length];
+    const path = TRAFFIC_ROUTES[v.circuit];
+    const target = path[v.route % path.length];
     const d = distance(v, target);
     if (d < 2.2) {
-      v.route = (v.route + 1) % TRAFFIC_ROUTE.length;
+      v.route = (v.route + 1) % path.length;
       continue;
     }
     const angle = Math.atan2(target.x - v.x, target.z - v.z);
@@ -151,14 +153,14 @@ export function traffic(w: GameWorld): void {
 }
 /** Path on the orthogonal street grid; reused by pursuit and attract driving. */
 export function roadTarget(v: Vehicle, target: { x: number; z: number }): { x: number; z: number } {
-  const lane = Math.abs(v.x - 30) < Math.abs(v.x + 42) ? 30 : -42;
-  const targetLane = Math.abs(target.x - 30) < Math.abs(target.x + 42) ? 30 : -42;
+  const lane = [...ROADS.vertical].sort((a, b) => Math.abs(v.x - a) - Math.abs(v.x - b))[0];
+  const targetLane = [...ROADS.vertical].sort((a, b) => Math.abs(target.x - a) - Math.abs(target.x - b))[0];
   if (Math.abs(v.x - lane) > 5) {
-    const cross = [-96, 0, 96].sort((a, b) => Math.abs(v.z - a) - Math.abs(v.z - b))[0];
+    const cross = [...ROADS.horizontal].sort((a, b) => Math.abs(v.z - a) - Math.abs(v.z - b))[0];
     return { x: targetLane, z: cross };
   }
   if (lane !== targetLane) {
-    const cross = [-96, 0, 96].sort(
+    const cross = [...ROADS.horizontal].sort(
       (a, b) => Math.abs(v.z - a) + Math.abs(target.z - a) - (Math.abs(v.z - b) + Math.abs(target.z - b)),
     )[0];
     if (Math.abs(v.z - cross) > 4) return { x: lane, z: cross };

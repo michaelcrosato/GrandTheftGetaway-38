@@ -5,6 +5,7 @@ import { play } from './play';
 import { viewOf, botIntents } from '../bot';
 import { RACE_GATES } from '../world/level';
 import type { Vehicle } from './components';
+import { yieldToRunner } from '../qa/test-helpers';
 function drive(v: Vehicle, t: { x: number; z: number }): Intents {
   const d = Math.hypot(t.x - v.x, t.z - v.z),
     a = Math.atan2(t.x - v.x, t.z - v.z),
@@ -23,6 +24,7 @@ describe('Side activities and lifecycle', () => {
     for (let i = 0; i < 1000 && !v.player.car; i++) {
       h.step(1, botIntents(v));
       v = viewOf(h);
+      if (i % 240 === 0) await yieldToRunner();
     }
     expect(v.player.car).not.toBe(0);
     const cash = v.player.cash;
@@ -39,6 +41,7 @@ describe('Side activities and lifecycle', () => {
         ),
       );
       v = viewOf(h);
+      if (i % 240 === 0) await yieldToRunner();
     }
     expect([...gates]).toEqual([0, 1, 2, 3, 4, 5]);
     expect(v.job.raceBest).toBeGreaterThan(0);

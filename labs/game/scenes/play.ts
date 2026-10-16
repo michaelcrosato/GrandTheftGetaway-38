@@ -1,11 +1,20 @@
 /** @file One Last Delivery: full mission scene on my-3dge's deterministic ECS and Rapier world. */
 import { defineScene, defineSettings, physicsOf } from '../../../engine/sim-api';
-import { BUILDINGS, PICKUPS, TRAFFIC_ROUTE, CHECKPOINTS } from '../world/level';
+import { BUILDINGS, PICKUPS, CHECKPOINTS, blocked } from '../world/level';
 import { jobOf, playerOf, type Components } from './components';
 import { motion, traffic } from './motion';
 import { combat, citizens, police } from './combat';
 import { mission } from './mission';
+import { TRAFFIC_ROUTES, DISTRICTS, ROADS, WORLD_LIMITS } from '../world/districts';
+import { PROP_SOLIDS } from '../world/props';
+import { VEHICLE_BODIES } from '../art/palette';
 export const GAME_SETTINGS = defineSettings({
+  'game.cruise': {
+    type: 'boolean',
+    default: false,
+    when: 'scene',
+    description: 'Explore the full city without a mission deadline.',
+  },
   'game.checkpoint': {
     type: 'integer',
     default: 0,
@@ -30,19 +39,28 @@ export const play = defineScene<Components>('game:play', {
     const physics = physicsOf(w);
     physics.addBody({
       type: 'fixed',
-      position: [-20, -1, 0],
-      colliders: [{ shape: { type: 'box', size: [260, 2, 360] } }],
+      position: [(WORLD_LIMITS.minX + WORLD_LIMITS.maxX) / 2, -1, 0],
+      colliders: [
+        {
+          shape: {
+            type: 'box',
+            size: [WORLD_LIMITS.maxX - WORLD_LIMITS.minX, 2, WORLD_LIMITS.maxZ - WORLD_LIMITS.minZ],
+          },
+        },
+      ],
     });
-    for (const b of BUILDINGS)
+    for (const b of [...BUILDINGS, ...PROP_SOLIDS])
       physics.addBody({
         type: 'fixed',
         position: [b.x, b.h / 2, b.z],
         colliders: [{ shape: { type: 'box', size: [b.w, b.h, b.d] } }],
       });
-    const stage = w.settings.get<number>('game.checkpoint');
+    const cruise = w.settings.get<boolean>('game.cruise');
+    const stage = cruise ? 0 : w.settings.get<number>('game.checkpoint');
     const checkpoint = CHECKPOINTS[stage];
     w.spawn({
       job: {
+        cruise,
         stage,
         checkpoint: stage,
         difficulty: w.settings.get<number>('game.difficulty'),
@@ -52,23 +70,50 @@ export const play = defineScene<Components>('game:play', {
     });
     const ride = w.spawn({ vehicle: { ...checkpoint.car, yaw: checkpoint.yaw, type: 'cobalt', color: '#4bd8e3' } });
     w.spawn({
-      driver: { ...checkpoint.player, y: checkpoint.y, yaw: checkpoint.yaw, car: checkpoint.inCar ? ride : 0 },
+      driver: {
+        ...(cruise ? checkpoint.car : checkpoint.player),
+        y: checkpoint.y,
+        yaw: checkpoint.yaw,
+        car: checkpoint.inCar || cruise ? ride : 0,
+      },
     });
     const rng = w.rng('city');
-    for (let i = 0; i < 8; i++) {
-      const a = TRAFFIC_ROUTE[i % 4],
-        b = TRAFFIC_ROUTE[(i + 1) % 4];
-      const t = i < 4 ? 0.28 : 0.7;
-      w.spawn({
-        vehicle: {
-          x: a.x + (b.x - a.x) * t,
-          z: a.z + (b.z - a.z) * t,
-          yaw: Math.atan2(b.x - a.x, b.z - a.z),
-          route: (i + 1) % 4,
-          color: ['#ffd196', '#db74a2', '#d4e5c3', '#676b8e'][i % 4],
-        },
-      });
+    for (let circuit = 0; circuit < TRAFFIC_ROUTES.length; circuit++) {
+      const path = TRAFFIC_ROUTES[circuit],
+        count = circuit === 0 ? 8 : 4;
+      for (let i = 0; i < count; i++) {
+        const a = path[i % 4],
+          b = path[(i + 1) % 4],
+          t = i < 4 ? 0.28 : 0.7;
+        const model = VEHICLE_BODIES[(i + circuit) % VEHICLE_BODIES.length];
+        w.spawn({
+          vehicle: {
+            x: a.x + (b.x - a.x) * t,
+            z: a.z + (b.z - a.z) * t,
+            yaw: Math.atan2(b.x - a.x, b.z - a.z),
+            route: (i + 1) % 4,
+            circuit,
+            model,
+            color: model === 'taxi' ? '#e9bc6b' : ['#ffd196', '#db74a2', '#d4e5c3', '#676b8e'][i % 4],
+          },
+        });
+      }
     }
+    DISTRICTS.forEach((d, i) => {
+      const x = [...ROADS.vertical].sort((a, b) => Math.abs(a - d.x) - Math.abs(b - d.x))[0] + 4;
+      const z = d.z + 25;
+      if (!blocked(x, z, 1.5))
+        w.spawn({
+          vehicle: {
+            x,
+            z,
+            yaw: Math.PI,
+            type: 'parked',
+            model: VEHICLE_BODIES[i],
+            color: ['#bd668f', '#6aafb9', '#d4b27f'][i % 3],
+          },
+        });
+    });
     for (let i = 0; i < 2; i++)
       w.spawn({
         vehicle: {
@@ -76,6 +121,7 @@ export const play = defineScene<Components>('game:play', {
           z: i ? -90 : -48,
           yaw: Math.PI,
           type: 'police',
+          model: 'sedan',
           color: '#e0e5ee',
           active: checkpoint.heat > 0,
         },
@@ -97,6 +143,32 @@ export const play = defineScene<Components>('game:play', {
         z = rng.range(-145, 145);
       w.spawn({ citizen: { x, z, homeX: x, homeZ: z, phase: rng.range(0, 8) } });
     }
+    for (const d of DISTRICTS.slice(1))
+      for (let i = 0; i < 10; i++) {
+        const road = [...ROADS.vertical].sort((a, b) => Math.abs(a - d.x) - Math.abs(b - d.x))[0];
+        const x = road + (i % 2 ? 13 : -13),
+          z = d.z + rng.range(-48, 48);
+        if (!blocked(x, z, 0.6))
+          w.spawn({
+            citizen: {
+              x,
+              z,
+              homeX: x,
+              homeZ: z,
+              phase: rng.range(0, 8),
+              role:
+                d.id === 'port'
+                  ? 'worker'
+                  : d.id === 'downtown'
+                    ? 'office'
+                    : d.id === 'sol'
+                      ? 'vendor'
+                      : d.id === 'marina' || d.id === 'south'
+                        ? 'visitor'
+                        : 'pedestrian',
+            },
+          });
+      }
     w.spawn({ citizen: { x: -73, z: 70, homeX: -73, homeZ: 70, role: 'contact' } });
     for (const p of PICKUPS) w.spawn({ collectible: { ...p } });
   },
